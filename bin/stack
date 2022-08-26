@@ -1,0 +1,12 @@
+#!/usr/bin/env ruby
+require 'aws-sdk-opsworks'
+require 'aws-sdk-sqs'
+require 'optparse'
+require 'cli/ui'
+require 'aws-sdk-cloudwatchlogs'
+require_relative '../lib/aws/root'
+require_relative '../lib/aws/opsworks'
+require_relative '../lib/aws/sqs'
+require_relative '../lib/aws/sqs'
+
+Ops::Root.new.run
