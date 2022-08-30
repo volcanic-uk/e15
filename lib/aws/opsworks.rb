@@ -35,6 +35,10 @@ class Ops::Opsworks < Ops::Base
     status + " "*(12-status.size) rescue status
   end
 
+  def decorate(string, width)
+    string + " "*(width-string.size) rescue string
+  end
+
   def deploy
     app = client.describe_apps(stack_id: stack.stack_id).apps.first
 
@@ -113,9 +117,13 @@ class Ops::Opsworks < Ops::Base
     )
   end
 
+  def app_source
+    @_app_source ||= client.describe_apps(stack_id: stack.stack_id).apps.first.app_source
+  end
+
   def set_app_source
     app = client.describe_apps(stack_id: stack.stack_id).apps.first
-    app_source = client.describe_apps(app_ids: [app.app_id]).apps.first.app_source
+    app_source = app.app_source
 
     key, value = nil, nil
 
@@ -127,6 +135,11 @@ class Ops::Opsworks < Ops::Base
 
     value = CLI::UI.ask("New value for #{key}, default:#{app_source[key]}")
     puts "value: #{value}"
+
+    client.update_app(app_id: app.app_id, app_source: { key.to_sym => value } )
+
+    app = client.describe_apps(stack_id: stack.stack_id).apps.first
+    puts app_source.inspect
   end
 
   def instances
@@ -156,7 +169,7 @@ class Ops::Opsworks < Ops::Base
     end
   end
 
-  def render_instances(wait: false)
+  def render_instances(wait: true)
     CLI::UI::Spinner.spin('Loading instances') { instances }
 
     spin_group = CLI::UI::SpinGroup.new(auto_debrief: false)
@@ -166,8 +179,9 @@ class Ops::Opsworks < Ops::Base
       string = [
         decorate_status(i.status),
         i.instance_id,
-        i.hostname,
-        i.public_ip,
+        decorate(i.hostname, instances.map{ |i| i.hostname.size }.max),
+        decorate(i.public_ip, instances.map{ |i| i.public_ip.size }.max),
+        app_source.revision
         #"ssh:// core_team_engineer-antondiachuk@#{i.public_ip}"
       ].join(' | ')
 
